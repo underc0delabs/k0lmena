@@ -11,6 +11,8 @@
     ],
     "moduleResolution": "node",
     "target": "esnext",
-    "module": "commonjs"
+    "module": "commonjs",
+    "baseUrl": "."
   },
+  "include": ["src/**/*"]
 }

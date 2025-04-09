@@ -11,14 +11,15 @@
     "load-report": "node src/reports/performance/generate-report.js",
     "load-report-cloud": "npx artillery run .github/workflows/load-test.yaml --record --key YOUR--KEY--HERE",
     "apiTest": "npx cucumber-js --profile api --tags @API",
-    "api-report": "node src/reports/api/report-generator.js"
+    "api-report": "node src/reports/api/report-generator.js",
+    "generate-locators": "ts-node src/tools/crawler/locators-generator.ts"
   },
   "keywords": [],
   "author": "Gianella Vezzoni - Danilo Vezzoni - Maximiliano Pintos",
   "license": "ISC",
   "description": "k0lmena automation framework",
   "devDependencies": {
-    "@cucumber/cucumber": "^11.0.1",
+    "@cucumber/cucumber": "^11.2.0",
     "@playwright/test": "^1.47.2",
     "@types/node": "^22.7.4",
     "artillery": "^2.0.21",
@@ -30,6 +31,7 @@
   "dependencies": {
     "@artilleryio/playwright-reporter": "^1.1.2",
     "artillery-plugin-html-report": "^2.0.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "mcp-pom": "github:juantor16/mcp-pw-pom-generator"
   }
 }
