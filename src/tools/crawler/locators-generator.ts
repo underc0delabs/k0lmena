@@ -39,7 +39,7 @@ async function run() {
         baseSelector = `[role="${CSS.escape(el.getAttribute("role") || "")}"]`;
       } else if (el.className && el.className.trim() !== "") {
         const candidate = "." + el.className.trim().split(/\s+/).map(cls => CSS.escape(cls)).join(".");
-        // Usamos el selector basado en clases solo si es único
+        // Usamos el selector basado en clases solo si es único.
         if (document.querySelectorAll(candidate).length === 1) {
           baseSelector = candidate;
         } else {
