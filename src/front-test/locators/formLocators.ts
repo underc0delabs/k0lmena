@@ -1,0 +1,14 @@
+export const firstName = '#firstname';
+export const lastName = '#lasttname';
+export const email = '#email';
+export const countryCode = 'app-forms select >> nth=0';
+export const phoneNumber = '#Phno';
+export const addressLine1 = '#Addl1';
+export const addressLine2 = '#Addl2';
+export const state = '#state';
+export const postalCode = '#postalcode';
+export const country = 'app-forms select >> nth=1';
+export const dob = '#Date';
+export const genderMale = '#male';
+export const terms = 'input[type="checkbox"]';
+export const submitButton = 'input[type="submit"]';
