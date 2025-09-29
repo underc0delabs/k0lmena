@@ -1,3 +1,11 @@
-export const inputLabel = 'Buscar productos, marcas y má';
-export const buttonSearch = 'div.nav-icon-search';
-export const divResult = 'Autos, Motos y OtrosAutos y';
+
+export const phNombre = 'Nombre';
+export const phApellido = 'Apellido';
+export const phEmail = 'correo';
+export const phUsuario = 'Usuario';
+export const phPassword = 'Mínimo';
+export const radioMasculinoName = 'Masculino'; 
+export const lblPais = 'País'; 
+export const btnRegistrarName = 'Registrar';
+export const msgExito = 'Registro exitoso';
+

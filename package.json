@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "npx cucumber-js --profile front --tags @Smoke --retry 1",
+    "test": "npx cucumber-js --profile front --tags @Smoke",
     "allTests": "npx cucumber-js test",
     "report": "npx ts-node src/reports/front/report-generator.js",
     "report-default": "node generate-report.ts",
