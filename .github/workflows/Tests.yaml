@@ -1,65 +1,70 @@
 name: Execute Tests
-on: 
+on:
   workflow_dispatch:
-jobs: 
+
+jobs:
   ExecuteTests:
     name: 'Executing automated Playwright tests and Artillery load tests'
     runs-on: ubuntu-latest
-    container: 
+    container:
       image: mcr.microsoft.com/playwright:v1.50.1-jammy
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      
+          node-version: '20'
+          cache: 'npm'
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Browsers
+      - name: Install Playwright browsers
         run: npx playwright install
 
       - name: Run Front Tests
         run: npm run test
-      
+
       - name: Run Front Reports
+        if: always()
         run: npm run report
 
       - name: Run API Tests
         run: npm run apiTest
-      
-      - name: Run API Reports
-        run: npm run api-report
 
-      - name: Install Artillery
-        run: npm install -g artillery
+      - name: Run API Reports
+        if: always()
+        run: npm run api-report
 
       - name: Run Performance Tests
         run: npx artillery run .github/workflows/load-test.yaml --output src/reports/performance/report.json
 
       - name: Run performance reporter generator
+        if: always()
         run: node src/reports/performance/generate-report.js
 
       - name: Upload Front Test Results
         if: always()
         uses: actions/upload-artifact@v4
-        with: 
+        with:
           name: front-report
           path: src/reports/front
+          if-no-files-found: ignore
 
       - name: Upload API Test Results
         if: always()
         uses: actions/upload-artifact@v4
-        with: 
+        with:
           name: api-report
           path: src/reports/api
+          if-no-files-found: ignore
 
       - name: Upload Performance Test Results
         if: always()
         uses: actions/upload-artifact@v4
-        with: 
+        with:
           name: performance-report
           path: src/reports/performance
-    
+          if-no-files-found: ignore
