@@ -10,7 +10,7 @@ result.json
 front-report.html
 report.json
 report.json.html
-/screenshots/
+src/reports/front/screenshots/
 index.html
 assets/
 output/
