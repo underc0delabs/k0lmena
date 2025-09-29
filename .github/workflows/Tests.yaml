@@ -36,7 +36,7 @@ jobs:
         run: npm run api-report
 
       - name: Run Performance Tests
-        run: npx artillery run src/performance-test/load-test.ts --output src/reports/performance/report.json
+        run: npx artillery run src/performance-test/load-test.yaml --output src/reports/performance/report.json
 
       - name: Run performance reporter generator
         if: always()
