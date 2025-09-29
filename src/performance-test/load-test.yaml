@@ -1,0 +1,14 @@
+config:
+  target: https://qarmy.ar
+  phases:
+    - duration: 5
+      arrivalRate: 1
+      rampTo: 3
+  engines:
+    playwright: {}
+  processor: ./load-test.ts
+
+scenarios:
+  - name: Login QARMY
+    engine: playwright
+    testFunction: loginQARMY
