@@ -20,7 +20,6 @@
     "debug": "cross-env CUCUMBER_DEBUG=1 npx cucumber-js --profile debug",
     "record": "node src/tools/generator/codegen.js",
     "record:generator": "ts-node src/tools/generator/record-generator.ts"
-
   },
   "keywords": [],
   "author": "Gianella Vezzoni - Danilo Vezzoni - Maximiliano Pintos",
@@ -37,7 +36,7 @@
     "@wdio/globals": "^9.12.5",
     "@wdio/local-runner": "^9.12.5",
     "@wdio/spec-reporter": "^9.12.3",
-    "appium": "^1.22.3",
+    "appium": "^1.17.1",
     "artillery": "^2.0.21",
     "artillery-engine-playwright": "^1.19.0",
     "cross-env": "^7.0.3",
