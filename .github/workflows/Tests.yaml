@@ -4,22 +4,19 @@ on:
 
 jobs:
   ExecuteTests:
-    name: 'Executing automated Playwright tests and Artillery load tests'
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.50.1-jammy
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '20'   # sin cache
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Install Playwright browsers
         run: npx playwright install
