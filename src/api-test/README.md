@@ -1,3 +1,0 @@
-Coming soon...
-
-By Underc0de Team
