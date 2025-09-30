@@ -7,9 +7,9 @@ export { k6HandleSummary as handleSummary };
 
 export const options = {
   scenarios: {
-    smoke: { executor: 'constant-vus', vus: 5, duration: '1m' }
+    soak: { executor: 'constant-vus', vus: 5, duration: '10m' } // ajustá a tu preferencia
   },
-  tags: { suite: 'http-smoke', baseurl: env.BASEURL }
+  tags: { suite: 'http-soak', baseurl: env.BASEURL }
 };
 
 export default function () {

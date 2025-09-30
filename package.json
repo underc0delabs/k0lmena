@@ -24,9 +24,9 @@
     "bootstrap:k6:nix": "bash src/performance-test/k6/scripts/bootstrap-k6.sh",
     "bootstrap:k6": "node -e \"process.platform==='win32'?process.exit(0):process.exit(1)\" && npm run bootstrap:k6:win || npm run bootstrap:k6:nix",
     "k6:build": "node src/performance-test/k6/esbuild.k6.config.mjs",
-    "k6:run:smoke": ".\\src\\tools\\k6\\k6.exe run src/performance-test/k6/dist/http/smoke.js",
-    "k6:run:stress": ".\\src\\tools\\k6\\k6.exe run src/performance-test/k6/dist/http/stress.js",
-    "k6:run:browser": ".\\src\\tools\\k6\\k6.exe run src/performance-test/k6/dist/browser/example.browser.js"
+    "k6:run:smoke": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\smoke.js",
+    "k6:run:stress": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\stress.js",
+    "k6:run:browser": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\browser\\example.browser.js"
   },
   "keywords": [],
   "author": "Gianella Vezzoni - Danilo Vezzoni - Maximiliano Pintos",

@@ -7,9 +7,16 @@ export { k6HandleSummary as handleSummary };
 
 export const options = {
   scenarios: {
-    smoke: { executor: 'constant-vus', vus: 5, duration: '1m' }
+    spike: [
+      { executor: 'ramping-vus', startVUs: 0, stages: [
+          { duration: '10s', target: 5 },
+          { duration: '10s', target: 50 }, // pico
+          { duration: '30s', target: 0 }
+        ]
+      }
+    ]
   },
-  tags: { suite: 'http-smoke', baseurl: env.BASEURL }
+  tags: { suite: 'http-spike', baseurl: env.BASEURL }
 };
 
 export default function () {

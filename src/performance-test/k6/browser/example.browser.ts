@@ -21,6 +21,7 @@ export const options = {
     }
   },
   tags: { suite: 'browser-ui' }
+  
 };
 
 export default async function () {
