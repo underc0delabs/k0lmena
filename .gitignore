@@ -14,3 +14,4 @@ src/reports/front/screenshots/
 index.html
 assets/
 output/
+/src/tools/k6
