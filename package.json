@@ -3,35 +3,47 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "npx cucumber-js --profile front --tags @Smoke",
-    "allTests": "npx cucumber-js test",
-    "report": "npx ts-node src/reports/front/report-generator.js",
-    "report-default": "node generate-report.ts",
-    "load": "npx artillery run src/performance-test/artillery/load-test.yaml --output src/reports/performance/report.json",
-    "load-report": "node src/reports/performance/artillery/generate-report.js",
-    "load-report-cloud": "npx artillery run src/performance-test/artillery/load-test.yaml --record --key YOUR--KEY--HERE",
-    "apiTest": "npx cucumber-js --profile api --tags @API",
-    "api-report": "node src/reports/api/report-generator.js",
-    "crawler": "ts-node src/tools/crawler/locators-generator.ts",
-    "mobile": "npx wdio run src/mobile-test/support/wdio.conf.ts",
-    "mobile-report": "ts-node src/reports/mobile/generate-report.ts",
-    "link-tester": "npx ts-node src/tools/link-tester/tester.ts",
-    "link-tester:full": "npx ts-node src/tools/link-tester/tester.ts -full",
-    "debug": "cross-env CUCUMBER_DEBUG=1 npx cucumber-js --profile debug",
-    "record": "node src/tools/generator/codegen.js",
-    "record:generator": "ts-node src/tools/generator/record-generator.ts",
-    "bootstrap:k6:win": "powershell -ExecutionPolicy Bypass -File src/performance-test/k6/scripts/bootstrap-k6.ps1",
-    "bootstrap:k6:nix": "bash src/performance-test/k6/scripts/bootstrap-k6.sh",
+    //Front test
+    "test": "npx cucumber-js --profile front --tags @Smoke --retry 1", //Ejecuta los test que tengan el tag @Smoke
+    "allTests": "npx cucumber-js test", //Ejecuta TODOS los tests
+    "report": "npx ts-node src/reports/front/report-generator.js", //Genera el reporte
+    "report-default": "node generate-report.ts", //Genera el reporte generico
+
+    //Load Test con Artillery
+    "load": "npx artillery run src/performance-test/artillery/load-test.yaml --output src/reports/performance/report.json", //Ejecuta las pruebas de performance
+    "load-report": "node src/reports/performance/artillery/generate-report.js", //Genera el reporte
+    "load-report-cloud": "npx artillery run src/performance-test/artillery/load-test.yaml --record --key YOUR--KEY--HERE", //Coloca tu KEY de artillery acá para los reportes CLOUD
+
+    //Load test con K6
+    "bootstrap:k6:win": "powershell -ExecutionPolicy Bypass -File src/performance-test/k6/scripts/bootstrap-k6.ps1", //Instalación de K6 en Windows
+    "bootstrap:k6:nix": "bash src/performance-test/k6/scripts/bootstrap-k6.sh", //Instalación de K6 en Linux y MAC
     "bootstrap:k6": "node -e \"process.platform==='win32'?process.exit(0):process.exit(1)\" && npm run bootstrap:k6:win || npm run bootstrap:k6:nix",
-    "k6:build": "node src/performance-test/k6/esbuild.k6.config.mjs",
-    "k6::smoke": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\smoke.js",
-    "k6:stress": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\stress.js",
-    "k6:soak": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\soak.js",
-    "k6:spike": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\spike.js",
-    "k6:run:browser": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\browser\\example.browser.js"
+    "k6:build": "node src/performance-test/k6/esbuild.k6.config.mjs", // Build antes de ejecutar las pruebas con K6
+    "k6::smoke": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\smoke.js", //Smoke - Prueba rápida y muy básica con baja carga
+    "k6:stress": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\stress.js", //Stress - Llevar al sistema a sus límites
+    "k6:soak": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\soak.js", //Soak - Mantener una carga constante durante bastante tiempo
+    "k6:spike": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\http\\spike.js", //Spike - Picos repentinos de carga y descarga para ver como se recupera
+    "k6:run:browser": "dotenv -e .env -- .\\src\\tools\\k6\\k6.exe run .\\src\\performance-test\\k6\\dist\\browser\\example.browser.js",// Browser - Mide el front real, interacciones con la UI
+
+    //API TEST
+    "apiTest": "npx cucumber-js --profile api --tags @API", //Ejecuta las pruebas de API
+    "api-report": "node src/reports/api/report-generator.js", //Genera el reporte
+
+    //Mobile testing
+    "mobile": "npx wdio run src/mobile-test/support/wdio.conf.ts", //Ejecuta las pruebas mobile
+    "mobile-report": "ts-node src/reports/mobile/generate-report.ts", //Genera el reporte
+
+    //Tools
+    "crawler": "ts-node src/tools/crawler/locators-generator.ts", //Obtiene todos los locators de una página
+    "link-tester": "npx ts-node src/tools/link-tester/tester.ts", //Controla que todos los links e imagenes funcionen correctamente
+    "link-tester:full": "npx ts-node src/tools/link-tester/tester.ts -full", //Lo mismo que el anterior, pero los revisa en todas las seciones de la página
+    "debug": "cross-env CUCUMBER_DEBUG=1 npx cucumber-js --profile debug", //Herramienta de debug
+    "record": "node src/tools/generator/codegen.js", //Grabadora de pasos
+    "record:generator": "ts-node src/tools/generator/record-generator.ts", //Conversor de la grabación, a estructura k0lmena
+
   },
   "keywords": [],
-  "author": "Gianella Vezzoni - Danilo Vezzoni - Maximiliano Pintos",
+  "author": "Danilo Vezzoni - Gianella Vezzoni - Maximiliano Pintos",
   "license": "ISC",
   "description": "k0lmena automation framework",
   "devDependencies": {
