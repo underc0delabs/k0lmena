@@ -14,7 +14,7 @@ const entryPatterns = [
 
 const entries = (await globby(entryPatterns)).map((f) => ({
   in: f,
-  out: path.join('dist/k6', path.relative('src/performance-test/k6', f)).replace(/\.ts$/, '.js'),
+  out: path.join('src/performance-test/k6/dist', path.relative('src/performance-test/k6', f)).replace(/\.ts$/, '.js'),
 }));
 
 // Asegurar carpetas de salida
@@ -51,7 +51,7 @@ await Promise.all(
 
 // ✅ Copiar summary.js a dist (sin bundlear)
 const srcSummary = 'src/performance-test/k6/reports/summary.js';
-const outSummary = 'dist/k6/reports/summary.js';
+const outSummary = 'src/performance-test/k6/dist/reports/summary.js';
 fs.mkdirSync(path.dirname(outSummary), { recursive: true });
 fs.copyFileSync(srcSummary, outSummary);
 
