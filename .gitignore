@@ -14,3 +14,6 @@ src/reports/front/screenshots/
 index.html
 assets/
 output/
+/src/tools/k6
+/src/performance-test/k6/dist/
+/src/reports/performance/k6/*

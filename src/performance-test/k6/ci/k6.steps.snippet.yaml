@@ -1,0 +1,48 @@
+# === K6 steps (merge into your existing job after Playwright) ===
+- name: Install k6 (with Chromium for k6 browser)
+  uses: grafana/setup-k6-action@v1
+  with:
+    install-browser: true
+
+- name: Build k6 bundles
+  run: node src/performance-test/k6/esbuild.k6.config.mjs
+
+- name: Run k6 HTTP smoke
+  uses: grafana/run-k6-action@v1
+  with:
+    path: dist/k6/http/smoke.js
+  env:
+    BASEURL: ${{ secrets.K6_BASEURL }}
+    API_BASEURL: ${{ secrets.K6_API_BASEURL }}
+    AUTH_TOKEN: ${{ secrets.K6_AUTH_TOKEN }}
+
+- name: Run k6 HTTP stress
+  uses: grafana/run-k6-action@v1
+  with:
+    path: dist/k6/http/stress.js
+  env:
+    BASEURL: ${{ secrets.K6_BASEURL }}
+
+- name: Run k6 Browser
+  uses: grafana/run-k6-action@v1
+  with:
+    path: dist/k6/browser/example.browser.js
+  env:
+    BASEURL: ${{ secrets.K6_BASEURL }}
+
+- name: Upload k6 summary report
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: k6-summary
+    path: |
+      src/reports/performance/k6/summary.html
+      src/reports/performance/k6/summary.json
+
+# Optional: run in k6 Cloud (Grafana) when token is present
+- name: Run in k6 Cloud (stress)
+  if: env.K6_CLOUD_TOKEN != ''
+  run: k6 cloud dist/k6/http/stress.js
+  env:
+    K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }}
+    BASEURL: ${{ secrets.K6_BASEURL }}

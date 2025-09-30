@@ -134,8 +134,8 @@ This framework is Open Source :)
 None for now...
 
 ## 👥 Contributors
-- Danilo Vezzoni
 - Gianella Vezzoni
+- Danilo Vezzoni
 - Maximiliano Pintos
 
 
