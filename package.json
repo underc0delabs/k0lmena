@@ -7,19 +7,35 @@
     "allTests": "npx cucumber-js test",
     "report": "npx ts-node src/reports/front/report-generator.js",
     "report-default": "node generate-report.ts",
-    "load": "npx artillery run src/performance-test/load-test.yaml --output src/reports/performance/report.json",
-    "load-report": "node src/reports/performance/generate-report.js",
-    "load-report-cloud": "npx artillery run src/performance-test/load-test.yaml --record --key YOUR--KEY--HERE",
+
+    "load": "npx artillery run src/performance-test/artillery/load-test.yaml --output src/reports/performance/report.json",
+    "load-report": "node src/reports/performance/artillery/generate-report.js",
+    "load-report-cloud": "npx artillery run src/performance-test/artillery/load-test.yaml --record --key YOUR--KEY--HERE",
+
     "apiTest": "npx cucumber-js --profile api --tags @API",
     "api-report": "node src/reports/api/report-generator.js",
+
     "crawler": "ts-node src/tools/crawler/locators-generator.ts",
+
     "mobile": "npx wdio run src/mobile-test/support/wdio.conf.ts",
     "mobile-report": "ts-node src/reports/mobile/generate-report.ts",
+
     "link-tester": "npx ts-node src/tools/link-tester/tester.ts",
     "link-tester:full": "npx ts-node src/tools/link-tester/tester.ts -full",
+
     "debug": "cross-env CUCUMBER_DEBUG=1 npx cucumber-js --profile debug",
     "record": "node src/tools/generator/codegen.js",
-    "record:generator": "ts-node src/tools/generator/record-generator.ts"
+    "record:generator": "ts-node src/tools/generator/record-generator.ts",
+
+    "bootstrap:k6:win": "powershell -ExecutionPolicy Bypass -File src/performance-test/k6/scripts/bootstrap-k6.ps1",
+    "bootstrap:k6:nix": "bash src/performance-test/k6/scripts/bootstrap-k6.sh",
+    "bootstrap:k6": "node -e \"process.platform==='win32'?process.exit(0):process.exit(1)\" && npm run bootstrap:k6:win || npm run bootstrap:k6:nix",
+
+    "k6:build": "node src/performance-test/k6/esbuild.k6.config.mjs",
+    "k6:run:smoke":  ".\\src\\tools\\k6\\k6.exe run dist/k6/http/smoke.js",
+    "k6:run:stress": ".\\src\\tools\\k6\\k6.exe run dist/k6/http/stress.js",
+    "k6:run:browser": ".\\src\\tools\\k6\\k6.exe run dist/k6/browser/example.browser.js"
+
   },
   "keywords": [],
   "author": "Gianella Vezzoni - Danilo Vezzoni - Maximiliano Pintos",
@@ -45,7 +61,11 @@
     "multiple-cucumber-html-reporter": "^3.9.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
-    "webdriverio": "^9.12.5"
+    "webdriverio": "^9.12.5",
+
+
+    "esbuild": "^0.24.0",
+    "globby": "^14.0.1"
   },
   "dependencies": {
     "@artilleryio/playwright-reporter": "^1.1.2",

@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "typeRoots": [
+      "src/performance-test/k6/types",
+      "node_modules/@types"
+    ]
+  },
+  "include": ["./**/*.ts", "./types/**/*.d.ts"]
+}
