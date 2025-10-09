@@ -357,7 +357,7 @@ function generateHTMLReport(data) {
 </html>`;
 }
 
-const inputPath = path.join(__dirname, 'report.json');
+const inputPath = path.join('src/reports/performance/artillery/report.json');
 const outputPath = path.join(__dirname, 'performance-report.html');
 
 fs.readFile(inputPath, 'utf8', (err, jsonString) => {
