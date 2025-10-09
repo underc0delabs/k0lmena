@@ -9,7 +9,7 @@
     "report": "npx ts-node src/reports/front/report-generator.js", 
     "report-default": "node generate-report.ts",
 
-    "load": "npx artillery run src/performance-test/artillery/load-test.yaml --output src/reports/performance/report.json", 
+    "load": "npx artillery run src/performance-test/artillery/load-test.yaml --output src/reports/performance/artillery/report.json",
     "load-report": "node src/reports/performance/artillery/generate-report.js",
     "load-report-cloud": "npx artillery run src/performance-test/artillery/load-test.yaml --record --key YOUR--KEY--HERE", 
 
