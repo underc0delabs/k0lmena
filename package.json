@@ -10,6 +10,7 @@
     "report-default": "node generate-report.ts",
 
     "load": "npx artillery run src/performance-test/artillery/load-test.yaml --output src/reports/performance/report.json", 
+    "load-report": "node src/reports/performance/artillery/generate-report.js",
     "load-report-cloud": "npx artillery run src/performance-test/artillery/load-test.yaml --record --key YOUR--KEY--HERE", 
 
     "bootstrap:k6:win": "powershell -ExecutionPolicy Bypass -File src/performance-test/k6/scripts/bootstrap-k6.ps1", 
