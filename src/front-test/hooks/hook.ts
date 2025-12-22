@@ -4,6 +4,7 @@ import { BeforeAll, AfterAll, AfterStep, Status } from '@cucumber/cucumber';
 import * as fs from 'fs';
 import * as path from 'path';
 import { setDefaultTimeout } from '@cucumber/cucumber';
+import { consumeHealingEvents, flushHealingHistory } from '../utils/autoHealing';
 
 setDefaultTimeout(60 * 1000);
 
@@ -34,7 +35,7 @@ BeforeAll(async function () {
 
   for (const browserType of browserTypes) {
     console.log(`Iniciando pruebas en: ${browserType.name()}`);
-    const browser = await browserType.launch({ headless: true });
+    const browser = await browserType.launch({ headless: false });
     const context = await browser.newContext();
     const page = await context.newPage();
 
@@ -44,6 +45,18 @@ BeforeAll(async function () {
 });
 
 AfterStep(async function ({ result }) {
+  // If auto-healing happened during this step, include it in the report even if the step passes.
+  const healEvents = consumeHealingEvents();
+  if (healEvents.length > 0) {
+    const lines = healEvents
+      .map(e => {
+        const note = e.note ? `\nNote: ${e.note}` : "";
+        return `AUTO-HEALING\n- At: ${e.at}\n- Action: ${e.action}\n- Original: ${e.original}\n- Healed with: ${e.healedWith}${note}`;
+      })
+      .join('\n\n');
+    await this.attach(lines, 'text/plain');
+  }
+
   if (result && result.status === Status.FAILED) {
     // Usamos la primera página de la lista (ajustar si usás más de una)
     const page = pages[0];
@@ -89,9 +102,13 @@ AfterStep(async function ({ result }) {
 
 AfterAll(async function () {
   console.log('Cerrando navegadores...');
-  for (const browser of browsers) {
-    await browser.close();
-  }
+  // Close browsers in parallel to reduce end-of-run waiting time.
+  const closePromise = Promise.all(browsers.map(b => b.close().catch(() => undefined)));
+
+  // Persist auto-healing history to disk (if enabled) in parallel.
+  const flushPromise = flushHealingHistory().catch(() => undefined);
+
+  await Promise.all([closePromise, flushPromise]);
 });
 
 export { browsers, pages };

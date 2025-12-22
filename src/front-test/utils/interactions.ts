@@ -1,4 +1,10 @@
 import { Page, type Locator } from "@playwright/test";
+import {
+  isSerializableLocatorInput,
+  learnFromLocator,
+  tryHeal,
+  type LocatorInputForHealing,
+} from "./autoHealing";
 
 /* ================================
    Tipos y adaptador de selectores
@@ -37,6 +43,41 @@ const toLocator = (page: Page, sel: LocatorInput): Locator => {
   throw new Error("Selector inválido");
 };
 
+/* ================================
+   Auto-healing wrapper
+   ================================ */
+
+const asHealingInput = (input: LocatorInput): LocatorInputForHealing | null => {
+  return isSerializableLocatorInput(input) ? (input as LocatorInputForHealing) : null;
+};
+
+const runWithHealing = async <T>(
+  page: Page,
+  input: LocatorInput,
+  actionName: string,
+  baseTimeoutMs: number,
+  actionFn: (loc: Locator, timeoutMs: number) => Promise<T>
+): Promise<{ value: T; locator: Locator; healed: boolean }> => {
+  const loc = toLocator(page, input);
+  const healingInput = asHealingInput(input);
+
+  try {
+    const value = await actionFn(loc, baseTimeoutMs);
+    if (healingInput) await learnFromLocator(page, healingInput, loc);
+    return { value, locator: loc, healed: false };
+  } catch (err) {
+    if (!healingInput) throw err;
+
+    const healed = await tryHeal(page, healingInput, actionName, actionFn, baseTimeoutMs, err);
+    if (healed.healed) {
+      // Learn from the locator that worked (so we continuously refine candidates)
+      await learnFromLocator(page, healingInput, healed.locator);
+      return { value: healed.value, locator: healed.locator, healed: true };
+    }
+    throw err;
+  }
+};
+
 /* ===================================================
    FUNCIONES CON NOMBRES ORIGINALES (no rompe nada)
    =================================================== */
@@ -49,11 +90,19 @@ export const getByPlaceholderAndFillIt = async (
   opts?: { timeout?: number; clear?: boolean }
 ) => {
   const { timeout = 5000, clear = true } = opts ?? {};
-  const input = page.getByPlaceholder(placeholder);
-  await input.waitFor({ state: "visible", timeout });
-  if (clear) await input.fill(""); // aseguro limpiar
-  await input.fill(value, { timeout });
-  return input; // devuelvo el Locator por si lo necesitan
+  const res = await runWithHealing(
+    page,
+    { placeholder },
+    "fillByPlaceholder",
+    timeout,
+    async (loc, t) => {
+      await loc.waitFor({ state: "visible", timeout: t });
+      if (clear) await loc.fill("");
+      await loc.fill(value, { timeout: t });
+      return loc;
+    }
+  );
+  return res.locator; // devuelvo el Locator por si lo necesitan
 };
 
 /** Ej: getElementByRole(page, "button", "Guardar") */
@@ -72,11 +121,19 @@ export const getElementByRoleAndClickIt = async (
   opts?: { exact?: boolean; timeout?: number; force?: boolean; clickDelayMs?: number }
 ) => {
   const { exact, timeout = 8000, force = false, clickDelayMs } = opts ?? {};
-  const btn = page.getByRole(role, { name, exact });
-  await btn.waitFor({ state: "visible", timeout });
-  if (clickDelayMs) await page.waitForTimeout(clickDelayMs);
-  await btn.click({ timeout, force });
-  return btn;
+  const res = await runWithHealing(
+    page,
+    { role, name, exact },
+    "clickByRole",
+    timeout,
+    async (loc, t) => {
+      await loc.waitFor({ state: "visible", timeout: t });
+      if (clickDelayMs) await page.waitForTimeout(clickDelayMs);
+      await loc.click({ timeout: t, force });
+      return loc;
+    }
+  );
+  return res.locator;
 };
 
 /** Ej: findLocator(page, { css: "#user" }) o findLocator(page, { role: "button", name: "Guardar" }) */
@@ -92,11 +149,13 @@ export const click = async (
   opts?: { timeout?: number; force?: boolean; delayMs?: number; waitForVisible?: boolean }
 ) => {
   const { timeout = 8000, force = false, delayMs, waitForVisible = true } = opts ?? {};
-  const el = toLocator(page, input);
-  if (waitForVisible) await el.waitFor({ state: "visible", timeout });
-  if (delayMs) await page.waitForTimeout(delayMs);
-  await el.click({ timeout, force });
-  return el;
+  const res = await runWithHealing(page, input, "click", timeout, async (loc, t) => {
+    if (waitForVisible) await loc.waitFor({ state: "visible", timeout: t });
+    if (delayMs) await page.waitForTimeout(delayMs);
+    await loc.click({ timeout: t, force });
+    return loc;
+  });
+  return res.locator;
 };
 
 export const fill = async (
@@ -106,12 +165,14 @@ export const fill = async (
   opts?: { timeout?: number; clear?: boolean; delayMs?: number }
 ) => {
   const { timeout = 8000, clear = true, delayMs } = opts ?? {};
-  const el = toLocator(page, input);
-  await el.waitFor({ state: "visible", timeout });
-  if (clear) await el.fill("");
-  if (delayMs) await page.waitForTimeout(delayMs);
-  await el.fill(value, { timeout });
-  return el;
+  const res = await runWithHealing(page, input, "fill", timeout, async (loc, t) => {
+    await loc.waitFor({ state: "visible", timeout: t });
+    if (clear) await loc.fill("");
+    if (delayMs) await page.waitForTimeout(delayMs);
+    await loc.fill(value, { timeout: t });
+    return loc;
+  });
+  return res.locator;
 };
 
 export const selectByLabel = async (
@@ -119,10 +180,13 @@ export const selectByLabel = async (
   label: string | RegExp,
   option: string | RegExp
 ) => {
-  const el = page.getByLabel(label);
-  await el.waitFor({ state: "visible" });
-  await el.selectOption({ label: String(option) });
-  return el;
+  const timeout = 8000;
+  const res = await runWithHealing(page, { label }, "selectByLabel", timeout, async (loc, t) => {
+    await loc.waitFor({ state: "visible", timeout: t });
+    await loc.selectOption({ label: String(option) });
+    return loc;
+  });
+  return res.locator;
 };
 
 export const selectOption = async (
@@ -130,14 +194,17 @@ export const selectOption = async (
   input: LocatorInput,
   option: string | RegExp | { label?: string; value?: string; index?: number }
 ) => {
-  const el = toLocator(page, input);
-  await el.waitFor({ state: "visible" });
-  if (typeof option === "string" || option instanceof RegExp) {
-    await el.selectOption({ label: String(option) });
-  } else {
-    await el.selectOption(option as any);
-  }
-  return el;
+  const timeout = 8000;
+  const res = await runWithHealing(page, input, "selectOption", timeout, async (loc, t) => {
+    await loc.waitFor({ state: "visible", timeout: t });
+    if (typeof option === "string" || option instanceof RegExp) {
+      await loc.selectOption({ label: String(option) });
+    } else {
+      await loc.selectOption(option as any);
+    }
+    return loc;
+  });
+  return res.locator;
 };
 
 export const press = async (
@@ -147,11 +214,13 @@ export const press = async (
   opts?: { timeout?: number; delayMs?: number }
 ) => {
   const { timeout = 8000, delayMs } = opts ?? {};
-  const el = toLocator(page, input);
-  await el.waitFor({ state: "visible", timeout });
-  if (delayMs) await page.waitForTimeout(delayMs);
-  await el.press(key, { timeout });
-  return el;
+  const res = await runWithHealing(page, input, "press", timeout, async (loc, t) => {
+    await loc.waitFor({ state: "visible", timeout: t });
+    if (delayMs) await page.waitForTimeout(delayMs);
+    await loc.press(key, { timeout: t });
+    return loc;
+  });
+  return res.locator;
 };
 
 export const typeSlow = async (
@@ -160,36 +229,51 @@ export const typeSlow = async (
   text: string,
   delayPerCharMs = 50
 ) => {
-  const el = toLocator(page, input);
-  await el.waitFor({ state: "visible" });
-  await el.type(text, { delay: delayPerCharMs });
-  return el;
+  const timeout = 8000;
+  const res = await runWithHealing(page, input, "type", timeout, async (loc, t) => {
+    await loc.waitFor({ state: "visible", timeout: t });
+    await loc.type(text, { delay: delayPerCharMs, timeout: t });
+    return loc;
+  });
+  return res.locator;
 };
 
 export const check = async (page: Page, input: LocatorInput) => {
-  const el = toLocator(page, input);
-  await el.waitFor({ state: "visible" });
-  await el.check();
-  return el;
+  const timeout = 8000;
+  const res = await runWithHealing(page, input, "check", timeout, async (loc, t) => {
+    await loc.waitFor({ state: "visible", timeout: t });
+    await loc.check({ timeout: t });
+    return loc;
+  });
+  return res.locator;
 };
 
 export const uncheck = async (page: Page, input: LocatorInput) => {
-  const el = toLocator(page, input);
-  await el.waitFor({ state: "visible" });
-  await el.uncheck();
-  return el;
+  const timeout = 8000;
+  const res = await runWithHealing(page, input, "uncheck", timeout, async (loc, t) => {
+    await loc.waitFor({ state: "visible", timeout: t });
+    await loc.uncheck({ timeout: t });
+    return loc;
+  });
+  return res.locator;
 };
 
 export const hover = async (page: Page, input: LocatorInput) => {
-  const el = toLocator(page, input);
-  await el.hover();
-  return el;
+  const timeout = 8000;
+  const res = await runWithHealing(page, input, "hover", timeout, async (loc, t) => {
+    await loc.hover({ timeout: t });
+    return loc;
+  });
+  return res.locator;
 };
 
 export const scrollIntoView = async (page: Page, input: LocatorInput) => {
-  const el = toLocator(page, input);
-  await el.scrollIntoViewIfNeeded();
-  return el;
+  const timeout = 8000;
+  const res = await runWithHealing(page, input, "scrollIntoView", timeout, async (loc, t) => {
+    await loc.scrollIntoViewIfNeeded({ timeout: t });
+    return loc;
+  });
+  return res.locator;
 };
 
 /** Espera una respuesta OK de una URL (útil para esperar APIs antes de validar UI) */
