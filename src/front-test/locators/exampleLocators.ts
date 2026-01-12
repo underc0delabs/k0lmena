@@ -7,6 +7,6 @@ export const phPassword = 'Mínimo';
 export const radioMasculinoName = 'Masculino'; 
 export const lblPais = 'País'; 
 export const btnRegistrarName = 'Registrar';
-export const msgExito = 'buena buddy';
+export const msgExito = 'Registro Exitoso';
 export const msgValidacionMail = 'Ingresá un email válido (ej:';
 
