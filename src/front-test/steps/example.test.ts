@@ -17,6 +17,7 @@ import {
   lblPais,
   btnRegistrarName,
   msgExito,
+  msgValidacionMail,
 } from '../locators/exampleLocators';
 
 Given('El usuario esta en la pagina del formulario', async () => {
@@ -82,3 +83,10 @@ Then('El usuario ve un mensaje de registro exitoso', async () => {
     await expect(page.getByText(msgExito)).toBeVisible();
   }
 });
+
+Then('El usuario ve el mensaje de validación de email', async () => {
+  for (const page of pages) {
+    await expect(page.getByText(msgValidacionMail)).toBeVisible();
+  }
+});
+
