@@ -144,7 +144,7 @@ async function isImageValid(url: string): Promise<boolean> {
   const cleanUrl = url.split('?')[0];
   try {
     const head = await axios.head(cleanUrl, { timeout: 5000, headers: { 'User-Agent': 'k0lmena-link-tester/1.0' } });
-    return (head.headers['content-type'] || '').startsWith('image/');
+    return String(head.headers['content-type'] || '').startsWith('image/');
   } catch {
     return false;
   }
