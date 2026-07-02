@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "strict": false,
     "skipLibCheck": true,
     "noErrorTruncation": true,
     "esModuleInterop": true,
@@ -7,9 +8,9 @@
     "resolveJsonModule": true,
     "lib": ["esnext", "dom"],
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "target": "esnext",
     "module": "commonjs",
-    "baseUrl": ".",
     "types": ["node"]
   },
   "include": ["src/**/*"]
