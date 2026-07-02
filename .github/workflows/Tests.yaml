@@ -6,7 +6,7 @@ jobs:
   ExecuteTests:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.50.1-jammy
+      image: mcr.microsoft.com/playwright:v1.61.1-jammy
     steps:
       - uses: actions/checkout@v4
 
