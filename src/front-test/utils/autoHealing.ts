@@ -22,6 +22,9 @@ type Candidate = {
   lastSuccessAt?: string;
   successes: number;
   failures: number;
+  // Pathname of the page where this candidate was learned/last healed.
+  // Used to prefer candidates seen on the current page (avoids cross-page mismatches).
+  url?: string;
 };
 
 type HistoryEntry = {
@@ -324,13 +327,15 @@ const upsertEntry = async (original: SerializableLocator): Promise<HistoryEntry>
   return history.entries[k];
 };
 
-const upsertCandidate = (entry: HistoryEntry, candidateLoc: SerializableLocator) => {
+const upsertCandidate = (entry: HistoryEntry, candidateLoc: SerializableLocator, url?: string) => {
   const max = getMaxCandidates();
   const now = new Date().toISOString();
   const key = keyOf(candidateLoc);
   const existing = entry.candidates.find(c => keyOf(c.locator) === key);
   if (!existing) {
-    entry.candidates.unshift({ locator: candidateLoc, createdAt: now, successes: 0, failures: 0 });
+    entry.candidates.unshift({ locator: candidateLoc, createdAt: now, successes: 0, failures: 0, url });
+  } else if (url && !existing.url) {
+    existing.url = url;
   }
   // Trim to max
   if (entry.candidates.length > max) {
@@ -346,6 +351,7 @@ const upsertCandidate = (entry: HistoryEntry, candidateLoc: SerializableLocator)
 
 type DomSnapshot = {
   tag: string;
+  inputType?: string;
   id?: string;
   name?: string;
   placeholder?: string;
@@ -432,6 +438,7 @@ const snapshotLocator = async (locator: Locator): Promise<DomSnapshot | null> =>
 
       return {
         tag: e.tagName.toLowerCase(),
+        inputType: getAttr('type'),
         id: e.id || undefined,
         name: getAttr('name'),
         placeholder: getAttr('placeholder'),
@@ -450,6 +457,7 @@ const snapshotLocator = async (locator: Locator): Promise<DomSnapshot | null> =>
     // Post-process to keep values small & stable.
     return {
       tag: snap.tag,
+      inputType: safeTrim(snap.inputType, 32),
       id: safeTrim(snap.id, 64),
       name: safeTrim(snap.name, 64),
       placeholder: safeTrim(snap.placeholder, 80),
@@ -474,19 +482,58 @@ const snapshotLocator = async (locator: Locator): Promise<DomSnapshot | null> =>
 };
 
 const inferRole = (snap: DomSnapshot): Parameters<Page['getByRole']>[0] | null => {
-  // Best-effort inference: prefer explicit role attr; fall back to tag.
+  // Best-effort inference: prefer explicit role attr; fall back to tag/type.
   if (snap.roleAttr) return snap.roleAttr as any;
   switch (snap.tag) {
     case 'button':
       return 'button';
     case 'a':
       return 'link';
-    case 'input':
-      return 'textbox';
     case 'select':
       return 'combobox';
+    case 'textarea':
+      return 'textbox';
+    case 'input': {
+      const t = (snap.inputType ?? 'text').toLowerCase();
+      switch (t) {
+        case 'radio':
+          return 'radio';
+        case 'checkbox':
+          return 'checkbox';
+        case 'button':
+        case 'submit':
+        case 'reset':
+          return 'button';
+        case 'range':
+          return 'slider';
+        case 'number':
+          return 'spinbutton';
+        case 'search':
+          return 'searchbox';
+        // hidden/password/file/etc. have no meaningful implicit ARIA role for name matching
+        case 'hidden':
+        case 'password':
+        case 'file':
+          return null;
+        default:
+          return 'textbox';
+      }
+    }
     default:
       return null;
+  }
+};
+
+// CSS escaping helpers (Node side). Keep selectors valid when ids/attrs contain special chars.
+const cssEscapeIdent = (v: string): string => v.replace(/([^a-zA-Z0-9_-])/g, '\\$1');
+const cssEscapeAttrValue = (v: string): string => v.replace(/(["\\])/g, '\\$1');
+
+const safePathname = (u: string | undefined | null): string | undefined => {
+  if (!u) return undefined;
+  try {
+    return new URL(u).pathname;
+  } catch {
+    return undefined;
   }
 };
 
@@ -499,22 +546,26 @@ const buildCandidatesFromSnapshot = (snap: DomSnapshot): SerializableLocator[] =
     if (!out.some(x => keyOf(x) === k)) out.push(c);
   };
 
+  // A <select>'s accessible name / text is the concatenation of all its options,
+  // which is long and brittle. Skip text/role-name candidates for selects.
+  const isSelect = snap.tag === 'select';
+
   // Highest signal / stability first.
   if (snap.dataTestId) pushUnique({ kind: 'testId', testId: snap.dataTestId });
-  if (snap.dataTest) pushUnique({ kind: 'css', css: `[data-test="${snap.dataTest}"]` });
-  if (snap.dataQa) pushUnique({ kind: 'css', css: `[data-qa="${snap.dataQa}"]` });
-  if (snap.dataCy) pushUnique({ kind: 'css', css: `[data-cy="${snap.dataCy}"]` });
-  if (snap.id) pushUnique({ kind: 'css', css: `#${snap.id}` });
-  if (snap.name) pushUnique({ kind: 'css', css: `[name="${snap.name}"]` });
-  if (snap.ariaLabel) pushUnique({ kind: 'css', css: `[aria-label="${snap.ariaLabel}"]` });
+  if (snap.dataTest) pushUnique({ kind: 'css', css: `[data-test="${cssEscapeAttrValue(snap.dataTest)}"]` });
+  if (snap.dataQa) pushUnique({ kind: 'css', css: `[data-qa="${cssEscapeAttrValue(snap.dataQa)}"]` });
+  if (snap.dataCy) pushUnique({ kind: 'css', css: `[data-cy="${cssEscapeAttrValue(snap.dataCy)}"]` });
+  if (snap.id) pushUnique({ kind: 'css', css: `#${cssEscapeIdent(snap.id)}` });
+  if (snap.name) pushUnique({ kind: 'css', css: `[name="${cssEscapeAttrValue(snap.name)}"]` });
+  if (snap.ariaLabel) pushUnique({ kind: 'css', css: `[aria-label="${cssEscapeAttrValue(snap.ariaLabel)}"]` });
   if (snap.placeholder) pushUnique({ kind: 'placeholder', placeholder: snap.placeholder });
-  if (snap.text) pushUnique({ kind: 'text', text: snap.text });
+  if (snap.text && !isSelect) pushUnique({ kind: 'text', text: snap.text });
   if (snap.stableClassSelector && snap.tag) pushUnique({ kind: 'css', css: `${snap.tag}${snap.stableClassSelector}` });
   if (snap.cssPath) pushUnique({ kind: 'css', css: snap.cssPath });
 
   // Role + accessible name (best effort).
   const role = inferRole(snap);
-  if (role && snap.text) {
+  if (role && snap.text && !isSelect) {
     pushUnique({ kind: 'role', role: role as any, name: snap.text, exact: true });
     pushUnique({ kind: 'role', role: role as any, name: snap.text, exact: false });
   }
@@ -528,23 +579,33 @@ const buildCandidatesFromSnapshot = (snap: DomSnapshot): SerializableLocator[] =
 
 const isProbablyNotFoundError = (err: unknown): boolean => {
   const msg = err instanceof Error ? err.message : String(err ?? '');
-  // Playwright timeout / not found signals
+  // Only heal on signals that the locator itself is stale/ambiguous/not present.
+  // Deliberately NOT matching the generic "locator." substring, which appears in
+  // almost every Playwright error (including ones healing can't fix, e.g. "not an <input>").
   return (
-    /Timeout/i.test(msg) ||
-    /waiting for/i.test(msg) ||
+    /Timeout.*exceeded/i.test(msg) ||
+    /waiting for (locator|selector|element)/i.test(msg) ||
     /strict mode violation/i.test(msg) ||
-    /locator\./i.test(msg)
+    /resolved to \d+ elements/i.test(msg) ||
+    /element(\(s\))? not found/i.test(msg) ||
+    /no element(s)? (found|match)/i.test(msg)
   );
 };
 
-const rankCandidates = (cands: Candidate[]): Candidate[] => {
-  // Higher score first: successes - failures, then recency.
-  const score = (c: Candidate) => {
-    const base = c.successes - c.failures;
-    const recency = c.lastSuccessAt ? Date.parse(c.lastSuccessAt) : 0;
-    return base * 1_000_000_000_000 + recency;
-  };
-  return [...cands].sort((a, b) => score(b) - score(a));
+const rankCandidates = (cands: Candidate[], currentPath?: string): Candidate[] => {
+  // Ordered comparison so the success/failure delta ALWAYS dominates.
+  // (A naive `net * 1e12 + epochMs` mixes terms: epoch ms in 2026 (~1.75e12)
+  //  can overpower a +1 net difference. Compare term-by-term instead.)
+  const net = (c: Candidate) => c.successes - c.failures;
+  const sameUrl = (c: Candidate) => (currentPath && c.url === currentPath ? 1 : 0);
+  const recency = (c: Candidate) => (c.lastSuccessAt ? Date.parse(c.lastSuccessAt) : 0);
+  return [...cands].sort((a, b) => {
+    const byNet = net(b) - net(a);
+    if (byNet !== 0) return byNet;
+    const byUrl = sameUrl(b) - sameUrl(a);
+    if (byUrl !== 0) return byUrl;
+    return recency(b) - recency(a);
+  });
 };
 
 export const learnFromLocator = async (page: Page, originalInput: LocatorInputForHealing, usedLocator: Locator) => {
@@ -555,11 +616,12 @@ export const learnFromLocator = async (page: Page, originalInput: LocatorInputFo
   if (!snap) return;
 
   const entry = await upsertEntry(original);
+  const currentPath = safePathname(page.url());
   const candidates = buildCandidatesFromSnapshot(snap);
-  for (const c of candidates) upsertCandidate(entry, c);
+  for (const c of candidates) upsertCandidate(entry, c, currentPath);
 
   // Ensure the original itself is also a candidate (helps ranking/metrics)
-  upsertCandidate(entry, original);
+  upsertCandidate(entry, original, currentPath);
 
   log('learn', toHumanString(original), 'candidates=', entry.candidates.length);
 
@@ -586,19 +648,34 @@ export const tryHeal = async <T>(
   if (!entry || entry.candidates.length === 0) return { healed: false };
 
   const candidateTimeout = Math.min(baseTimeoutMs, getCandidateTimeoutMs());
+  const currentPath = safePathname(page.url());
 
-  const ranked = rankCandidates(entry.candidates);
+  const ranked = rankCandidates(entry.candidates, currentPath);
   log('heal:start', toHumanString(original), `candidates=${ranked.length}`);
 
   for (const cand of ranked) {
     const human = toHumanString(cand.locator);
     try {
       const loc = pageLocatorFromSerializable(page, cand.locator);
+
+      // Safety gate: never heal towards an ambiguous match. If the candidate
+      // currently resolves to more than one element we could act on the wrong
+      // one, so skip it and record a failure. count() does not wait, so a
+      // not-yet-rendered element (0) still falls through to actionFn's waitFor.
+      const matchCount = await loc.count().catch(() => 1);
+      if (matchCount > 1) {
+        cand.failures += 1;
+        historyDirty = true;
+        log('heal:skip-ambiguous', human, `matches=${matchCount}`);
+        continue;
+      }
+
       const v = await actionFn(loc, candidateTimeout);
 
       // Success: update stats
       cand.successes += 1;
       cand.lastSuccessAt = new Date().toISOString();
+      if (currentPath) cand.url = currentPath;
       historyDirty = true;
 
       // Promote the successful candidate near the front
