@@ -19,3 +19,5 @@ output/
 /src/performance-test/k6/dist/
 /src/reports/performance/k6/*
 front-history.json
+# Per-worker auto-healing history files (Cucumber parallel mode)
+front-history.worker-*.json
