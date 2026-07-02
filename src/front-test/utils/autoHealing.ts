@@ -72,7 +72,18 @@ const isHealEnabled = () => {
 const getHistoryPath = () => {
   const p = process.env.K0LMENA_AUTO_HEALING_HISTORY_PATH?.trim();
   const defaultRel = path.join('.k0lmena', 'auto-healing', 'front-history.json');
-  const finalPath = p && p.length > 0 ? p : defaultRel;
+  let finalPath = p && p.length > 0 ? p : defaultRel;
+
+  // In Cucumber parallel mode each worker is a separate process. Give every
+  // worker its own history file so concurrent writes don't clobber each other.
+  const workerId = process.env.CUCUMBER_WORKER_ID;
+  if (workerId) {
+    const ext = path.extname(finalPath);
+    finalPath = ext
+      ? `${finalPath.slice(0, -ext.length)}.worker-${workerId}${ext}`
+      : `${finalPath}.worker-${workerId}`;
+  }
+
   return path.isAbsolute(finalPath) ? finalPath : path.join(process.cwd(), finalPath);
 };
 
