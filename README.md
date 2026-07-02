@@ -104,7 +104,7 @@ src/
     └── debug/                # Hook de depuración
 ```
 
-Archivos raíz relevantes: [`package.json`](package.json), [`cucumber.json`](cucumber.json) (perfiles), [`playwright.config.ts`](playwright.config.ts), [`tsconfig.json`](tsconfig.json), [`.example.env`](.example.env).
+Archivos raíz relevantes: [`package.json`](package.json), [`cucumber.js`](cucumber.js) (perfiles), [`playwright.config.ts`](playwright.config.ts), [`tsconfig.json`](tsconfig.json), [`.example.env`](.example.env).
 
 ---
 
@@ -144,6 +144,7 @@ La configuración se hace por variables de entorno. Copiá [`.example.env`](.exa
 |----------|---------|-------------|
 | `BASEURL` | — | URL del sitio bajo prueba (front, crawler, link-tester, codegen). |
 | `BROWSER` | *(vacío)* | `chromium`, `firefox` o `webkit`. Vacío = ejecuta los **tres**. |
+| `PARALLEL` | *(vacío)* | Ejecución en paralelo de Cucumber (front/API). Vacío/`0`/`1`/`false` = secuencial; `on`/`true` = auto (un worker por CPU); `N` (>1) = N workers. Ver [Ejecución en paralelo](#ejecución-en-paralelo). |
 | `HEADLESS` | `true` | Ejecutar sin ventana (`true`/`false`). |
 | `SLOWMO` | `0` | Milisegundos de retardo entre acciones (útil para depurar). |
 | `VIEWPORT_WIDTH` | `1366` | Ancho del viewport. |
@@ -187,7 +188,7 @@ npm run test
 npm run allTests
 ```
 
-Los perfiles de Cucumber están definidos en [`cucumber.json`](cucumber.json). Podés controlar el
+Los perfiles de Cucumber están definidos en [`cucumber.js`](cucumber.js). Podés controlar el
 navegador y el modo headless por variables de entorno, por ejemplo:
 
 ```bash
@@ -197,6 +198,32 @@ BROWSER=chromium HEADLESS=false SLOWMO=300 npm run test
 # Habilitar traces solo cuando falla
 TRACE=on-failure npm run test
 ```
+
+#### Ejecución en paralelo
+
+Las suites de Cucumber (front y API) pueden ejecutarse en paralelo para acelerar el testing.
+Se controla con la variable `PARALLEL` (en el `.env` o inline):
+
+| `PARALLEL` | Comportamiento |
+|------------|----------------|
+| *(vacío)* / `0` / `1` / `false` / `off` / `no` | **Secuencial** (por defecto). |
+| `on` / `true` / `yes` | **Auto**: un worker por CPU disponible. |
+| `N` (número > 1) | **N workers** en paralelo. |
+
+```bash
+# 4 workers en paralelo
+PARALLEL=4 npm run test
+
+# Auto (un worker por CPU)
+PARALLEL=on npm run apiTest
+```
+
+Notas:
+- Cada worker de Cucumber es un **proceso independiente**; el auto-healing escribe un archivo
+  de historial por worker (`front-history.worker-<id>.json`) para evitar colisiones de escritura.
+- El perfil `debug` corre **siempre en secuencial** (para que los logs sean legibles).
+- El paralelismo es a nivel de **escenario**. Como cada escenario recorre los navegadores
+  configurados en `BROWSER`, para máxima velocidad conviene fijar un único navegador por corrida.
 
 ### API
 
